@@ -25,10 +25,12 @@ const Login = () => {
     setSuccess('');
     setIsLoading(true);
 
+    const API_URL = import.meta.env.VITE_API_URL || 'https://vitaltrack-api.onrender.com/api';
+
     try {
       if (isRegistering) {
         // === SEND REGISTRATION DATA TO PYTHON ===
-        await axios.post('http://localhost:5000/api/register', {
+        await axios.post(`${API_URL}/register`, {
           name: name,
           email: email,
           password: password
@@ -40,7 +42,7 @@ const Login = () => {
         
       } else {
         // === SEND LOGIN CREDENTIALS TO PYTHON ===
-        const response = await axios.post('http://localhost:5000/api/login', {
+       const response = await axios.post(`${API_URL}/login`, {
           email: email,
           password: password
         });
