@@ -1,22 +1,22 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Clock, CheckCircle2, Plus, X } from 'lucide-react';
 import axios from 'axios';
-import { AuthContext } from './AuthContext'; // Import
-
-
+import { AuthContext } from './AuthContext'; 
 
 const WaitingRoom = () => {
   const { user } = useContext(AuthContext);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // State for the new task form
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newTime, setNewTime] = useState('');
 
- const fetchTasks = async () => {
+  // Defined at the top so ALL functions can access it!
+  const API_URL = import.meta.env.VITE_API_URL || 'https://auracure-backend.onrender.com/api';
+
+  const fetchTasks = async () => {
     try {
       const response = await axios.get(`${API_URL}/tasks?caretaker_id=${user.id}`);
       setTasks(response.data);
@@ -29,12 +29,10 @@ const WaitingRoom = () => {
 
   useEffect(() => {
     fetchTasks();
-  }, []);
+  }, [user.id]);
 
-  // Dequeue (Remove from front)
- const handleCompleteNextTask = async () => {
+  const handleCompleteNextTask = async () => {
     try {
-      // Fixed: Using tasks[0].id instead of undefined taskId
       await axios.post(`${API_URL}/tasks/complete?task_id=${tasks[0].id}`);
       fetchTasks();
     } catch (err) {
@@ -42,7 +40,6 @@ const WaitingRoom = () => {
     }
   };
 
-  // Enqueue (Add to back)
   const handleAddTask = async (e) => {
     e.preventDefault();
     try {
@@ -66,8 +63,6 @@ const WaitingRoom = () => {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
-      
-      {/* Header */}
       <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Clock className="w-5 h-5 text-blue-600" />
@@ -86,7 +81,6 @@ const WaitingRoom = () => {
         </div>
       </div>
       
-      {/* The Dynamic Queue List */}
       <div className="divide-y divide-slate-50 flex-1 overflow-y-auto">
         {tasks.length === 0 ? (
           <div className="p-8 text-center text-slate-500">All caught up! Queue is empty.</div>
@@ -100,7 +94,6 @@ const WaitingRoom = () => {
                 </p>
               </div>
               
-              {/* FIFO Logic: Only the first task can be completed */}
               {index === 0 && (
                 <button 
                   onClick={handleCompleteNextTask}
@@ -115,7 +108,6 @@ const WaitingRoom = () => {
         )}
       </div>
 
-      {/* Inline Form to Add Tasks */}
       {isAdding && (
         <form onSubmit={handleAddTask} className="p-4 bg-slate-50 border-t border-slate-200 space-y-3">
           <input 
@@ -124,7 +116,7 @@ const WaitingRoom = () => {
             className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md outline-none focus:border-blue-500"
           />
           <input 
-            type="text" required placeholder="Task Description (e.g. Blood Draw)" 
+            type="text" required placeholder="Task Description" 
             value={newDesc} onChange={(e) => setNewDesc(e.target.value)}
             className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md outline-none focus:border-blue-500"
           />
@@ -140,7 +132,6 @@ const WaitingRoom = () => {
           </div>
         </form>
       )}
-
     </div>
   );
 };
