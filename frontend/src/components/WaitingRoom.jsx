@@ -16,9 +16,9 @@ const WaitingRoom = () => {
   const [newDesc, setNewDesc] = useState('');
   const [newTime, setNewTime] = useState('');
 
-  const fetchTasks = async () => {
+ const fetchTasks = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/tasks?caretaker_id=${user.id}`);
+      const response = await axios.get(`${API_URL}/tasks?caretaker_id=${user.id}`);
       setTasks(response.data);
     } catch (err) {
       console.error("Failed to fetch tasks", err);
@@ -32,10 +32,11 @@ const WaitingRoom = () => {
   }, []);
 
   // Dequeue (Remove from front)
-  const handleCompleteNextTask = async () => {
+ const handleCompleteNextTask = async () => {
     try {
-      await axios.post(`http://localhost:5000/api/tasks/complete?task_id=${taskId}`);
-  fetchTasks();
+      // Fixed: Using tasks[0].id instead of undefined taskId
+      await axios.post(`${API_URL}/tasks/complete?task_id=${tasks[0].id}`);
+      fetchTasks();
     } catch (err) {
       console.error("Failed to complete task");
     }
@@ -45,19 +46,16 @@ const WaitingRoom = () => {
   const handleAddTask = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/tasks', {
-  patientName: newName,
-  description: newDesc,
-  time: newTime,
-  caretakerId: user.id // <--- SEND ID
-});
-      // Clear the form and hide it
+      await axios.post(`${API_URL}/tasks`, {
+        patientName: newName,
+        description: newDesc,
+        time: newTime,
+        caretakerId: user.id
+      });
       setNewName('');
       setNewDesc('');
       setNewTime('');
       setIsAdding(false);
-      
-      // Refresh the queue!
       fetchTasks();
     } catch (err) {
       console.error("Failed to add task");

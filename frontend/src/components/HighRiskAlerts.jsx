@@ -17,19 +17,20 @@ const HighRiskAlerts = () => {
   useEffect(() => {
     const fetchHighRiskPatients = async () => {
       try {
-        // Fetch from our Python -> C++ Bridge!
-       const response = await axios.get(`http://localhost:5000/api/patients/high-risk?caretaker_id=${user.id}`);
+        const API_URL = import.meta.env.VITE_API_URL || 'https://auracure-backend.onrender.com/api';
+        const response = await axios.get(`${API_URL}/patients/high-risk?caretaker_id=${user.id}`);
         setAlerts(response.data);
       } catch (err) {
         console.error("Error fetching alerts:", err);
-        setError('Failed to connect to the C++ Engine.');
+        setError('Failed to connect to the backend.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchHighRiskPatients();
-  }, []); // The empty array means this only runs once when the component mounts
+  }, [user.id]);
+ // The empty array means this only runs once when the component mounts
 
   if (loading) {
     return <div className="p-8 text-center text-slate-500 bg-white rounded-xl shadow-sm border border-slate-200">Syncing with C++ Engine...</div>;
