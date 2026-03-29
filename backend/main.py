@@ -55,6 +55,29 @@ def init_db():
             time TEXT NOT NULL
         )
     """)
+    # ADDED: Time-series table for daily vitals
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS daily_vitals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_id INTEGER NOT NULL,
+            date TEXT DEFAULT CURRENT_TIMESTAMP,
+            sys_bp INTEGER NOT NULL,
+            dia_bp INTEGER NOT NULL,
+            heart_rate INTEGER NOT NULL,
+            FOREIGN KEY(patient_id) REFERENCES patients(id)
+        )
+    """)
+    # ADDED: Table to store AI-generated anomalies
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS alerts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_id INTEGER NOT NULL,
+            alert_level TEXT NOT NULL,
+            message TEXT NOT NULL,
+            timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(patient_id) REFERENCES patients(id)
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -71,6 +94,12 @@ class CaretakerLogin(BaseModel):
 
 class NewPatient(BaseModel):
     id: int; name: str; age: int; riskScore: int; caretakerId: int
+
+class DailyReading(BaseModel):
+    patientId: int
+    sysBp: int
+    diaBp: int
+    heartRate: int
 
 class NewTask(BaseModel):
     patientName: str; description: str; time: str; caretakerId: int
@@ -248,3 +277,49 @@ def predict_future_risk(history: PatientHistory):
     predicted_risk = max(0, min(100, 100 - int(predicted_mobility)))
     warning = "CRITICAL: Rapid Decline" if slope < -5 else "Warning: Slow Decline" if slope < 0 else "Stable"
     return {"predicted_mobility_score": round(predicted_mobility, 1), "predicted_risk_score": predicted_risk, "trajectory_slope": round(slope, 2), "ai_warning": warning}
+
+from statistics import mean
+
+@app.post("/api/vitals/log")
+def log_daily_reading(reading: DailyReading):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # 1. Save today's reading
+    cursor.execute("""
+        INSERT INTO daily_vitals (patient_id, sys_bp, dia_bp, heart_rate) 
+        VALUES (?, ?, ?, ?)
+    """, (reading.patientId, reading.sysBp, reading.diaBp, reading.heartRate))
+    
+    # 2. Fetch recent history for AI Anomaly Detection
+    cursor.execute("""
+        SELECT sys_bp FROM daily_vitals 
+        WHERE patient_id = ? ORDER BY date DESC LIMIT 4
+    """, (reading.patientId,))
+    history = cursor.fetchall()
+    
+    alert_triggered = None
+    
+    # 3. AI Logic: Check for a 10% spike against a 3-day moving average
+    if len(history) >= 4:
+        # history[0] is today. history[1:4] is the past 3 readings.
+        past_sys_bps = [row['sys_bp'] for row in history[1:4]] 
+        avg_past_sys = mean(past_sys_bps)
+        
+        if reading.sysBp >= (avg_past_sys * 1.10):
+            alert_triggered = f"AI ALERT: 10% BP Spike Detected. Jumped from baseline ~{int(avg_past_sys)} to {reading.sysBp} mmHg."
+            
+            # Log the critical alert
+            cursor.execute("INSERT INTO alerts (patient_id, alert_level, message) VALUES (?, ?, ?)",
+                           (reading.patientId, "Critical", alert_triggered))
+            
+            # (Optional) Update the overall risk_score in the patients table here
+            cursor.execute("UPDATE patients SET risk_score = risk_score + 15 WHERE id = ?", (reading.patientId,))
+
+    conn.commit()
+    conn.close()
+    
+    return {
+        "message": "Vitals logged successfully.",
+        "alert": alert_triggered
+    }
