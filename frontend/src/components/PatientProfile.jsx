@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { User, Activity, BrainCircuit, AlertTriangle, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { User, Activity, BrainCircuit, AlertTriangle, ArrowLeft, CheckCircle2, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import LogVitalsForm from './LogVitalsForm';
 
@@ -22,7 +22,7 @@ const PatientProfile = () => {
       setPatient(response.data);
     } catch (err) {
       console.error(err);
-      setError('Patient not found in the C++ Engine.');
+      setError('Patient not found.');
     } finally {
       setLoading(false);
     }
@@ -37,31 +37,60 @@ const PatientProfile = () => {
     setAiResult(null);
     try {
       const API_URL = import.meta.env.VITE_API_URL || 'https://auracure-backend.onrender.com/api';
-      const response = await axios.get(`${API_URL}/ai/predict-risk/${patient.id}`);
+      const response = await axios.get(`${API_URL}/ai/predict-risk/${id}`);
       
       if (response.data.error) {
-        alert(response.data.error);
+        alert(response.data.error); 
       } else {
         setAiResult(response.data);
       }
     } catch (err) {
       console.error("AI Analysis failed", err);
+      alert("Failed to run AI prediction.");
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  if (loading) return <div className="p-8 text-center text-slate-500">Retrieving O(1) Profile from Hash Map...</div>;
+  const handleDeletePatient = async () => {
+    const confirmed = window.confirm(
+      `Are you absolutely sure you want to remove ${patient.name}? This will permanently delete all their vitals, alerts, and medical history.`
+    );
+
+    if (confirmed) {
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || 'https://auracure-backend.onrender.com/api';
+        await axios.delete(`${API_URL}/patients/${id}`);
+        navigate(-1); 
+      } catch (err) {
+        console.error("Failed to delete patient", err);
+        alert("Failed to delete patient. Ensure backend is connected.");
+      }
+    }
+  };
+
+  if (loading) return <div className="p-8 text-center text-slate-500">Retrieving Patient Profile...</div>;
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Back
-      </button>
+      {/* Header Actions */}
+      <div className="flex justify-between items-center">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Back
+        </button>
 
-      <div className="flex items-center gap-4 mb-8">
+        <button 
+          onClick={handleDeletePatient}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-colors border border-red-100 hover:border-red-600"
+        >
+          <Trash2 className="w-4 h-4" /> Remove Patient
+        </button>
+      </div>
+
+      {/* Patient Header */}
+      <div className="flex items-center gap-4 mb-8 mt-4">
         <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
           <User className="w-8 h-8" />
         </div>
@@ -73,9 +102,11 @@ const PatientProfile = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
+        {/* Left Side: Vitals & AI */}
         <div className="lg:col-span-2 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
+            {/* Vitals Card */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-4">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
                 <Activity className="w-5 h-5 text-blue-600" />
@@ -99,6 +130,7 @@ const PatientProfile = () => {
               </div>
             </div>
 
+            {/* AI Module Card */}
             <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-6 text-white space-y-4 relative overflow-hidden">
               <div className="absolute -right-10 -top-10 opacity-10">
                 <BrainCircuit className="w-48 h-48" />
@@ -112,24 +144,24 @@ const PatientProfile = () => {
               <div className="relative z-10">
                 {!aiResult ? (
                   <div className="text-center py-6">
-                    <p className="text-slate-400 mb-4 text-sm">Run Linear Regression on personalized mobility data to forecast future risk trajectory.</p>
+                    <p className="text-slate-400 mb-4 text-sm">Run Linear Regression on real historical BP data to forecast trajectory.</p>
                     <button 
                       onClick={runAIPrediction}
                       disabled={isAnalyzing}
-                      className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-lg font-medium transition-colors w-full"
+                      className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-lg font-medium transition-colors w-full disabled:bg-blue-800"
                     >
-                      {isAnalyzing ? 'Processing Math Engine...' : 'Run Personalized Prediction'}
+                      {isAnalyzing ? 'Processing History...' : 'Run Prediction'}
                     </button>
                   </div>
                 ) : (
                   <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
                     <div className={`p-3 rounded-lg flex items-center gap-3 ${
-                      aiResult.trajectory_slope < -5 ? 'bg-red-500/20 text-red-200 border border-red-500/30' : 
-                      aiResult.trajectory_slope < 0 ? 'bg-orange-500/20 text-orange-200 border border-orange-500/30' : 
+                      aiResult.trajectory_slope > 5 ? 'bg-red-500/20 text-red-200 border border-red-500/30' : 
+                      aiResult.trajectory_slope > 0 ? 'bg-orange-500/20 text-orange-200 border border-orange-500/30' : 
                       'bg-green-500/20 text-green-200 border border-green-500/30'
                     }`}>
-                      {aiResult.trajectory_slope < 0 ? <AlertTriangle className="w-5 h-5 shrink-0" /> : <CheckCircle2 className="w-5 h-5 shrink-0" />}
-                      <span className="font-medium">{aiResult.ai_warning}</span>
+                      {aiResult.trajectory_slope > 0 ? <AlertTriangle className="w-5 h-5 shrink-0" /> : <CheckCircle2 className="w-5 h-5 shrink-0" />}
+                      <span className="font-medium text-sm">{aiResult.ai_warning}</span>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
@@ -139,7 +171,7 @@ const PatientProfile = () => {
                       </div>
                       <div>
                         <p className="text-slate-400 text-sm">Slope (m)</p>
-                        <p className={`text-xl font-mono ${aiResult.trajectory_slope < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                        <p className={`text-xl font-mono ${aiResult.trajectory_slope > 0 ? 'text-red-400' : 'text-green-400'}`}>
                           {aiResult.trajectory_slope > 0 ? '+' : ''}{aiResult.trajectory_slope}
                         </p>
                       </div>
@@ -151,6 +183,7 @@ const PatientProfile = () => {
           </div>
         </div>
 
+        {/* Right Side: Log Vitals Form */}
         <div className="lg:col-span-1">
           <LogVitalsForm patientId={patient.id} onNewReading={fetchPatientData} />
         </div>

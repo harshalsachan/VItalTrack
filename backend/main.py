@@ -5,6 +5,7 @@ import platform
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from statistics import mean
 
 app = FastAPI()
 
@@ -15,6 +16,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ==========================================
+# 1. DATABASE SETUP
+# ==========================================
 def get_db():
     conn = sqlite3.connect("vitaltrack.db")
     conn.row_factory = sqlite3.Row
@@ -31,7 +36,6 @@ def init_db():
             name TEXT NOT NULL
         )
     """)
-   
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS patients (
             id INTEGER PRIMARY KEY,
@@ -41,7 +45,6 @@ def init_db():
             risk_score INTEGER NOT NULL
         )
     """)
-  
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,7 +54,6 @@ def init_db():
             time TEXT NOT NULL
         )
     """)
-  
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS daily_vitals (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,7 +65,6 @@ def init_db():
             FOREIGN KEY(patient_id) REFERENCES patients(id)
         )
     """)
-  
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS alerts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,6 +80,9 @@ def init_db():
 
 init_db()
 
+# ==========================================
+# 2. DATA MODELS
+# ==========================================
 class CaretakerRegister(BaseModel):
     name: str; email: str; password: str
 
@@ -88,18 +92,16 @@ class CaretakerLogin(BaseModel):
 class NewPatient(BaseModel):
     id: int; name: str; age: int; riskScore: int; caretakerId: int
 
-class DailyReading(BaseModel):
-    patientId: int
-    sysBp: int
-    diaBp: int
-    heartRate: int
-
 class NewTask(BaseModel):
     patientName: str; description: str; time: str; caretakerId: int
 
-class PatientHistory(BaseModel):
-    days: list[int]; mobility_scores: list[int]
+class DailyReading(BaseModel):
+    patientId: int; sysBp: int; diaBp: int; heartRate: int
 
+
+# ==========================================
+# 3. AUTHENTICATION ENDPOINTS
+# ==========================================
 @app.post("/api/register")
 def register_caretaker(caretaker: CaretakerRegister):
     conn = get_db()
@@ -125,7 +127,9 @@ def login_caretaker(caretaker: CaretakerLogin):
     raise HTTPException(status_code=401, detail="Invalid email or password")
 
 
-
+# ==========================================
+# 4. C++ ENGINE BRIDGE
+# ==========================================
 is_windows = platform.system() == "Windows"
 lib_ext = "dll" if is_windows else "so"
 
@@ -164,6 +168,9 @@ except Exception as e:
     print(f"❌ Failed to load C++ engine: {e}")
 
 
+# ==========================================
+# 5. PATIENT ENDPOINTS
+# ==========================================
 @app.get("/api/patients")
 def get_all_patients(caretaker_id: int):
     conn = get_db()
@@ -218,6 +225,29 @@ def get_patient_profile(patient_id: int):
     age = cpp_engine.get_patient_age(patient_id)
     return {"id": patient_id, "name": name_bytes.decode('utf-8'), "age": age, "status": "Critical" if score > 90 else "High Risk" if score > 70 else "Low Risk", "riskScore": score}
 
+@app.delete("/api/patients/{patient_id}")
+def delete_patient(patient_id: int):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        # Cascade Delete: Erase history first to prevent orphaned records
+        cursor.execute("DELETE FROM daily_vitals WHERE patient_id = ?", (patient_id,))
+        cursor.execute("DELETE FROM alerts WHERE patient_id = ?", (patient_id,))
+        cursor.execute("DELETE FROM patients WHERE id = ?", (patient_id,))
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Patient not found.")
+        conn.commit()
+        return {"message": f"Patient {patient_id} permanently deleted."}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Database error during deletion.")
+    finally:
+        conn.close()
+
+
+# ==========================================
+# 6. TASK ENDPOINTS
+# ==========================================
 @app.get("/api/tasks")
 def get_waiting_room_tasks(caretaker_id: int):
     conn = get_db()
@@ -249,55 +279,14 @@ def complete_front_task(task_id: int):
     cpp_engine.complete_task()
     return {"message": "Task dequeued"}
 
-@app.get("/api/ai/predict-risk/{patient_id}")
-def predict_future_risk(patient_id: int):
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # Fetch the REAL historical Systolic BP data for this specific patient
-    cursor.execute("SELECT sys_bp FROM daily_vitals WHERE patient_id = ? ORDER BY id ASC", (patient_id,))
-    records = cursor.fetchall()
-    conn.close()
 
-    # We need at least 3 real data points to draw a trendline
-    if len(records) < 3:
-        return {"error": "Not enough data. Log at least 3 daily vitals to run AI analysis."}
-
-    # Extract the real BP readings
-    y = [row['sys_bp'] for row in records]
-    x = list(range(1, len(y) + 1))
-    n = len(x)
-
-    # Linear Regression Formula (y = mx + b)
-    sum_x, sum_y = sum(x), sum(y)
-    sum_xy = sum(x[i] * y[i] for i in range(n))
-    sum_x_squared = sum(x[i] ** 2 for i in range(n))
-    
-    denominator = (n * sum_x_squared) - (sum_x ** 2)
-    slope = 0 if denominator == 0 else ((n * sum_xy) - (sum_x * sum_y)) / denominator
-    intercept = (sum_y - (slope * sum_x)) / n
-    
-   
-    next_day = x[-1] + 1
-    predicted_bp = (slope * next_day) + intercept
-    
-    
-    warning = "CRITICAL: Rapid BP Spike Trajectory" if slope > 5 else "Warning: Upward BP Trend" if slope > 0 else "Stable Trajectory"
-    
-    return {
-        "predicted_value": round(predicted_bp, 1), 
-        "trajectory_slope": round(slope, 2), 
-        "ai_warning": warning
-    }
-   
-
-from statistics import mean
-
+# ==========================================
+# 7. AI & CLINICAL VITALS ENDPOINTS
+# ==========================================
 @app.post("/api/vitals/log")
 def log_daily_reading(reading: DailyReading):
     conn = get_db()
     cursor = conn.cursor()
-    
     cursor.execute("""
         INSERT INTO daily_vitals (patient_id, sys_bp, dia_bp, heart_rate) 
         VALUES (?, ?, ?, ?)
@@ -305,7 +294,7 @@ def log_daily_reading(reading: DailyReading):
     
     alert_triggered = None
     
-  
+    # TIER 1: Immediate Clinical Analysis
     if reading.sysBp >= 180 or reading.diaBp >= 120:
         alert_triggered = f"CRITICAL: Hypertensive Crisis ({reading.sysBp}/{reading.diaBp}). Immediate attention required!"
     elif reading.sysBp >= 140 or reading.diaBp >= 90:
@@ -317,19 +306,18 @@ def log_daily_reading(reading: DailyReading):
     elif reading.heartRate < 60:
         alert_triggered = f"WARNING: Bradycardia. Low resting heart rate ({reading.heartRate} BPM)."
 
-   
+    # TIER 2: Historical Trend Analysis
     if not alert_triggered:
         cursor.execute("SELECT sys_bp FROM daily_vitals WHERE patient_id = ? ORDER BY date DESC LIMIT 4", (reading.patientId,))
         history = cursor.fetchall()
         
         if len(history) >= 4:
             past_sys_bps = [row['sys_bp'] for row in history[1:4]] 
-            avg_past_sys = sum(past_sys_bps) / len(past_sys_bps)
+            avg_past_sys = mean(past_sys_bps)
             
             if reading.sysBp >= (avg_past_sys * 1.10):
                 alert_triggered = f"AI TREND ALERT: 10% BP Spike. Jumped from baseline ~{int(avg_past_sys)} to {reading.sysBp} mmHg."
 
-    
     if alert_triggered:
         cursor.execute("INSERT INTO alerts (patient_id, alert_level, message) VALUES (?, ?, ?)",
                        (reading.patientId, "Critical" if "CRITICAL" in alert_triggered else "Warning", alert_triggered))
@@ -337,10 +325,40 @@ def log_daily_reading(reading: DailyReading):
     conn.commit()
     conn.close()
     
+    return {
+        "message": f"Vitals logged ({reading.sysBp}/{reading.diaBp}, HR: {reading.heartRate}). Patient is stable.",
+        "alert": alert_triggered
+    }
+
+@app.get("/api/ai/predict-risk/{patient_id}")
+def predict_future_risk(patient_id: int):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT sys_bp FROM daily_vitals WHERE patient_id = ? ORDER BY id ASC", (patient_id,))
+    records = cursor.fetchall()
+    conn.close()
+
+    if len(records) < 3:
+        return {"error": "Not enough data. Log at least 3 daily vitals to run AI analysis."}
+
+    y = [row['sys_bp'] for row in records]
+    x = list(range(1, len(y) + 1))
+    n = len(x)
+
+    sum_x, sum_y = sum(x), sum(y)
+    sum_xy = sum(x[i] * y[i] for i in range(n))
+    sum_x_squared = sum(x[i] ** 2 for i in range(n))
     
-    success_msg = f"Vitals logged ({reading.sysBp}/{reading.diaBp}, HR: {reading.heartRate}). Patient is stable."
+    denominator = (n * sum_x_squared) - (sum_x ** 2)
+    slope = 0 if denominator == 0 else ((n * sum_xy) - (sum_x * sum_y)) / denominator
+    intercept = (sum_y - (slope * sum_x)) / n
+    
+    next_day = x[-1] + 1
+    predicted_bp = (slope * next_day) + intercept
+    warning = "CRITICAL: Rapid BP Spike Trajectory" if slope > 5 else "Warning: Upward BP Trend" if slope > 0 else "Stable Trajectory"
     
     return {
-        "message": success_msg,
-        "alert": alert_triggered
+        "predicted_value": round(predicted_bp, 1), 
+        "trajectory_slope": round(slope, 2), 
+        "ai_warning": warning
     }
