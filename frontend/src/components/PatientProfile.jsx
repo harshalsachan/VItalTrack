@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { User, Activity, BrainCircuit, AlertTriangle, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import axios from 'axios';
-import LogVitalsForm from './LogVitalsForm'; // Newly added import
+import LogVitalsForm from './LogVitalsForm';
 
 const PatientProfile = () => {
   const { id } = useParams();
@@ -15,7 +15,6 @@ const PatientProfile = () => {
   const [aiResult, setAiResult] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Extracted this function so we can call it again when new vitals are logged
   const fetchPatientData = async () => {
     try {
       const API_URL = import.meta.env.VITE_API_URL || 'https://auracure-backend.onrender.com/api';
@@ -84,14 +83,11 @@ const PatientProfile = () => {
         </div>
       </div>
 
-      {/* NEW 3-COLUMN GRID LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left Side: Vitals & AI (Spans 2 columns on large screens) */}
         <div className="lg:col-span-2 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            {/* Vitals Card */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-4">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
                 <Activity className="w-5 h-5 text-blue-600" />
@@ -115,7 +111,6 @@ const PatientProfile = () => {
               </div>
             </div>
 
-            {/* AI Module Card */}
             <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-6 text-white space-y-4 relative overflow-hidden">
               <div className="absolute -right-10 -top-10 opacity-10">
                 <BrainCircuit className="w-48 h-48" />
@@ -168,7 +163,6 @@ const PatientProfile = () => {
           </div>
         </div>
 
-        {/* Right Side: Log Vitals Form (Spans 1 column) */}
         <div className="lg:col-span-1">
           <LogVitalsForm patientId={patient.id} onNewReading={fetchPatientData} />
         </div>

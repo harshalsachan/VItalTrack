@@ -4,8 +4,6 @@ import { Search, Users, ChevronRight } from 'lucide-react';
 import axios from 'axios';
 import { AuthContext } from './AuthContext';
 
-
-
 const PatientDirectory = () => {
   const { user } = useContext(AuthContext);
   const [patients, setPatients] = useState([]);
@@ -27,7 +25,6 @@ const PatientDirectory = () => {
     fetchPatients();
   }, [user.id]);
 
-  // Filter patients based on the search bar
   const filteredPatients = patients.filter(p => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     p.id.toString().includes(searchQuery)
@@ -37,14 +34,12 @@ const PatientDirectory = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Patient Directory</h1>
           <p className="text-slate-500 mt-1">Manage and view all registered patient profiles.</p>
         </div>
         
-        {/* Search Bar */}
         <div className="relative w-full md:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input 

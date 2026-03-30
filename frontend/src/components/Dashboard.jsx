@@ -5,26 +5,19 @@ import HighRiskAlerts from './HighRiskAlerts';
 const Dashboard = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      
-      {/* Dashboard Header */}
       <header className="mb-8">
         <h1 className="text-3xl font-bold text-slate-800">Overview</h1>
         <p className="text-slate-500 mt-1">Monitor daily tasks and critical patient alerts.</p>
       </header>
 
-      {/* Main Grid Layout: 2 columns on large screens, 1 on smaller screens */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
-        {/* Left Column: The Queue (First-In, First-Out) */}
         <section>
           <WaitingRoom />
         </section>
 
-        {/* Right Column: The BST (Sorted by highest risk) */}
         <section>
           <HighRiskAlerts />
         </section>
-
       </div>
     </div>
   );

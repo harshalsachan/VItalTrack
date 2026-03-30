@@ -3,8 +3,6 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { AlertTriangle } from 'lucide-react';
 
 const MobilityTrendChart = () => {
-  // Mock data: Combined 30-day historical data + 7-day Python AI prediction
-  // Notice how "Day 30" connects the actual data to the predicted data
   const data = [
     { day: 'Day 1', actualSteps: 4200 },
     { day: 'Day 5', actualSteps: 4100 },
@@ -12,18 +10,16 @@ const MobilityTrendChart = () => {
     { day: 'Day 15', actualSteps: 3650 },
     { day: 'Day 20', actualSteps: 3400 },
     { day: 'Day 25', actualSteps: 3100 },
-    { day: 'Day 30', actualSteps: 2800, predictedSteps: 2800 }, // Connection point
+    { day: 'Day 30', actualSteps: 2800, predictedSteps: 2800 },
     { day: 'Day 32', predictedSteps: 2600 },
     { day: 'Day 35', predictedSteps: 2300 },
     { day: 'Day 37', predictedSteps: 2100 },
   ];
 
-  // Logic to determine if mobility is declining based on the AI's last predicted point
   const isDeclining = data[data.length - 1].predictedSteps < 2500;
 
   return (
     <div className="w-full">
-      {/* Conditional AI Warning Banner */}
       {isDeclining && (
         <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
@@ -36,7 +32,6 @@ const MobilityTrendChart = () => {
         </div>
       )}
 
-      {/* The Recharts Line Chart */}
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
@@ -48,7 +43,6 @@ const MobilityTrendChart = () => {
             />
             <Legend verticalAlign="top" height={36} iconType="circle" />
             
-            {/* Historical Data Line (Solid Blue) */}
             <Line 
               type="monotone" 
               name="Actual Steps (Past 30 Days)" 
@@ -59,7 +53,6 @@ const MobilityTrendChart = () => {
               activeDot={{ r: 6 }} 
             />
             
-            {/* AI Prediction Line (Dashed Red) */}
             <Line 
               type="monotone" 
               name="AI Prediction (Next 7 Days)" 

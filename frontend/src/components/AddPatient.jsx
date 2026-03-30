@@ -4,19 +4,15 @@ import { UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 import { AuthContext } from './AuthContext';
 
-
-
 const AddPatient = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   
-  // Form State
   const [patientId, setPatientId] = useState('');
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [riskScore, setRiskScore] = useState('');
   
-  // UI State
   const [status, setStatus] = useState({ type: '', message: '' });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -26,8 +22,7 @@ const AddPatient = () => {
     setStatus({ type: '', message: '' });
     const API_URL = import.meta.env.VITE_API_URL || 'https://auracure-backend.onrender.com/api';
     try {
-      // Send the data directly to our new Python endpoint
-     await axios.post(`${API_URL}/patients`, {
+      await axios.post(`${API_URL}/patients`, {
         id: parseInt(patientId),
         name: name,
         age: parseInt(age),
@@ -35,16 +30,13 @@ const AddPatient = () => {
         caretakerId: user.id 
       });
 
-
       setStatus({ type: 'success', message: `${name} has been added to the system.` });
       
-      // Clear the form after success
       setPatientId('');
       setName('');
       setAge('');
       setRiskScore('');
 
-      // Optional: Automatically redirect back to dashboard after 2 seconds to see the result
       setTimeout(() => navigate('/'), 2000);
 
     } catch (error) {
@@ -67,7 +59,6 @@ const AddPatient = () => {
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
         
-        {/* Status Messages */}
         {status.message && (
           <div className={`p-4 mb-6 rounded-lg flex items-center gap-2 text-sm font-medium ${
             status.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
@@ -80,7 +71,6 @@ const AddPatient = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            {/* Patient ID */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Patient ID Number</label>
               <input 
@@ -93,7 +83,6 @@ const AddPatient = () => {
               />
             </div>
 
-            {/* Full Name */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Full Name</label>
               <input 
@@ -106,7 +95,6 @@ const AddPatient = () => {
               />
             </div>
 
-            {/* Age */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Age</label>
               <input 
@@ -121,7 +109,6 @@ const AddPatient = () => {
               />
             </div>
 
-            {/* Risk Score */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Initial Risk Score (0-100)</label>
               <input 

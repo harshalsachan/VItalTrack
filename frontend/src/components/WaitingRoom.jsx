@@ -13,7 +13,6 @@ const WaitingRoom = () => {
   const [newDesc, setNewDesc] = useState('');
   const [newTime, setNewTime] = useState('');
 
-  // Defined at the top so ALL functions can access it!
   const API_URL = import.meta.env.VITE_API_URL || 'https://auracure-backend.onrender.com/api';
 
   const fetchTasks = async () => {

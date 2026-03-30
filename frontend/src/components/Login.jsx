@@ -2,17 +2,14 @@ import React, { useState, useContext } from 'react';
 import { AuthContext } from './AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { HeartPulse, Lock, Mail, User, AlertCircle, CheckCircle } from 'lucide-react';
-import axios from 'axios'; // We use Axios to talk to your Python backend!
+import axios from 'axios';
 
 const Login = () => {
   const { login } = useContext(AuthContext); 
-  // Form State
   const [isRegistering, setIsRegistering] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
-  // UI State
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +26,6 @@ const Login = () => {
 
     try {
       if (isRegistering) {
-        // === SEND REGISTRATION DATA TO PYTHON ===
         await axios.post(`${API_URL}/register`, {
           name: name,
           email: email,
@@ -37,22 +33,19 @@ const Login = () => {
         });
         
         setSuccess('Account created successfully! You can now sign in.');
-        setIsRegistering(false); // Switch back to the login view automatically
-        setPassword(''); // Clear the password for security
+        setIsRegistering(false);
+        setPassword('');
         
       } else {
-        // === SEND LOGIN CREDENTIALS TO PYTHON ===
-       const response = await axios.post(`${API_URL}/login`, {
+        const response = await axios.post(`${API_URL}/login`, {
           email: email,
           password: password
         });
         
-        // SAVE THE USER TO GLOBAL CONTEXT!
         login(response.data.user); 
         navigate('/');
       }
     } catch (err) {
-      // Catch errors thrown by FastAPI (like "Email already registered" or "Invalid password")
       setError(err.response?.data?.detail || 'An error occurred connecting to the server.');
     } finally {
       setIsLoading(false);
@@ -63,7 +56,6 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-100 p-8 space-y-8">
         
-        {/* Header */}
         <div className="text-center">
           <div className="mx-auto w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
             <HeartPulse className="w-8 h-8 text-blue-600" />
@@ -74,7 +66,6 @@ const Login = () => {
           </p>
         </div>
 
-        {/* Status Messages */}
         {error && (
           <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2 text-sm">
             <AlertCircle className="w-5 h-5 shrink-0" />
@@ -88,10 +79,8 @@ const Login = () => {
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           
-          {/* Only show Name field if registering */}
           {isRegistering && (
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Full Name</label>
@@ -148,7 +137,6 @@ const Login = () => {
           </button>
         </form>
 
-        {/* Toggle between Login and Register */}
         <div className="text-center pt-4 border-t border-slate-100">
           <button 
             type="button"

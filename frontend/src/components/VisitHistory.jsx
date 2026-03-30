@@ -1,20 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, PlusCircle, Activity } from 'lucide-react';
-// import { getVisitHistory } from './api'; // Uncomment when the backend is ready
 
 const VisitHistory = ({ patientId }) => {
   const [visits, setVisits] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulating the API call to your friend's Python server
     const fetchHistory = async () => {
       try {
-        // REAL API CALL:
-        // const response = await getVisitHistory(patientId);
-        // setVisits(response.data);
-
-        // MOCK DATA (Until backend is connected):
         setTimeout(() => {
           setVisits([
             { id: 1, date: "Oct 12, 2026", doctor: "Dr. Smith", notes: "Reported slight dizziness. Adjusted BP meds." },
@@ -23,7 +16,7 @@ const VisitHistory = ({ patientId }) => {
             { id: 4, date: "Aug 14, 2026", doctor: "Dr. Adams", notes: "Initial intake and baseline mobility test." }
           ]);
           setLoading(false);
-        }, 600); // Fake network delay
+        }, 600);
       } catch (error) {
         console.error("Failed to fetch visit history", error);
         setLoading(false);
@@ -35,7 +28,6 @@ const VisitHistory = ({ patientId }) => {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden h-full">
-      {/* Header section with an Add button */}
       <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Calendar className="w-5 h-5 text-slate-600" />
@@ -47,7 +39,6 @@ const VisitHistory = ({ patientId }) => {
         </button>
       </div>
       
-      {/* Scrollable container for the timeline */}
       <div className="p-6 max-h-[400px] overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center h-32 text-slate-400 gap-2">
@@ -58,10 +49,8 @@ const VisitHistory = ({ patientId }) => {
           <div className="space-y-6 border-l-2 border-slate-100 ml-3">
             {visits.map((visit) => (
               <div key={visit.id} className="relative pl-6">
-                {/* Timeline dot */}
                 <div className="absolute w-3 h-3 bg-blue-500 rounded-full -left-[7px] top-1.5 ring-4 ring-white"></div>
                 
-                {/* Content */}
                 <div className="flex justify-between items-start mb-1">
                   <p className="text-sm font-bold text-slate-700">{visit.date}</p>
                   <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">

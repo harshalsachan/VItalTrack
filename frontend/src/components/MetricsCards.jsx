@@ -2,8 +2,6 @@ import React from 'react';
 import { HeartPulse, Activity, Footprints, Scale } from 'lucide-react';
 
 const MetricsCards = () => {
-  // Mock data representing the latest real-time sensor data 
-  // This could be fetched from your C++ backend via the Python API
   const metrics = [
     {
       title: "Heart Rate",
@@ -43,7 +41,7 @@ const MetricsCards = () => {
       icon: Footprints,
       color: "text-amber-500",
       bgColor: "bg-amber-100",
-      alert: true // Triggers a visual warning state
+      alert: true
     }
   ];
 
