@@ -17,9 +17,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ==========================================
-# 1. DATABASE SETUP
-# ==========================================
 def get_db():
     conn = sqlite3.connect("vitaltrack.db")
     conn.row_factory = sqlite3.Row
@@ -80,9 +77,6 @@ def init_db():
 
 init_db()
 
-# ==========================================
-# 2. DATA MODELS
-# ==========================================
 class CaretakerRegister(BaseModel):
     name: str; email: str; password: str
 
@@ -99,9 +93,6 @@ class DailyReading(BaseModel):
     patientId: int; sysBp: int; diaBp: int; heartRate: int
 
 
-# ==========================================
-# 3. AUTHENTICATION ENDPOINTS
-# ==========================================
 @app.post("/api/register")
 def register_caretaker(caretaker: CaretakerRegister):
     conn = get_db()
@@ -127,9 +118,6 @@ def login_caretaker(caretaker: CaretakerLogin):
     raise HTTPException(status_code=401, detail="Invalid email or password")
 
 
-# ==========================================
-# 4. C++ ENGINE BRIDGE
-# ==========================================
 is_windows = platform.system() == "Windows"
 lib_ext = "dll" if is_windows else "so"
 
@@ -168,9 +156,6 @@ except Exception as e:
     print(f"❌ Failed to load C++ engine: {e}")
 
 
-# ==========================================
-# 5. PATIENT ENDPOINTS
-# ==========================================
 @app.get("/api/patients")
 def get_all_patients(caretaker_id: int):
     conn = get_db()
@@ -230,7 +215,6 @@ def delete_patient(patient_id: int):
     conn = get_db()
     cursor = conn.cursor()
     try:
-        # Cascade Delete: Erase history first to prevent orphaned records
         cursor.execute("DELETE FROM daily_vitals WHERE patient_id = ?", (patient_id,))
         cursor.execute("DELETE FROM alerts WHERE patient_id = ?", (patient_id,))
         cursor.execute("DELETE FROM patients WHERE id = ?", (patient_id,))
@@ -245,9 +229,6 @@ def delete_patient(patient_id: int):
         conn.close()
 
 
-# ==========================================
-# 6. TASK ENDPOINTS
-# ==========================================
 @app.get("/api/tasks")
 def get_waiting_room_tasks(caretaker_id: int):
     conn = get_db()
@@ -280,9 +261,6 @@ def complete_front_task(task_id: int):
     return {"message": "Task dequeued"}
 
 
-# ==========================================
-# 7. AI & CLINICAL VITALS ENDPOINTS
-# ==========================================
 @app.post("/api/vitals/log")
 def log_daily_reading(reading: DailyReading):
     conn = get_db()
@@ -294,7 +272,6 @@ def log_daily_reading(reading: DailyReading):
     
     alert_triggered = None
     
-    # TIER 1: Immediate Clinical Analysis
     if reading.sysBp >= 180 or reading.diaBp >= 120:
         alert_triggered = f"CRITICAL: Hypertensive Crisis ({reading.sysBp}/{reading.diaBp}). Immediate attention required!"
     elif reading.sysBp >= 140 or reading.diaBp >= 90:
@@ -306,7 +283,6 @@ def log_daily_reading(reading: DailyReading):
     elif reading.heartRate < 60:
         alert_triggered = f"WARNING: Bradycardia. Low resting heart rate ({reading.heartRate} BPM)."
 
-    # TIER 2: Historical Trend Analysis
     if not alert_triggered:
         cursor.execute("SELECT sys_bp FROM daily_vitals WHERE patient_id = ? ORDER BY date DESC LIMIT 4", (reading.patientId,))
         history = cursor.fetchall()
