@@ -34,28 +34,16 @@ const PatientProfile = () => {
 
   const runAIPrediction = async () => {
     setIsAnalyzing(true);
+    setAiResult(null);
     try {
-      const currentMobility = 100 - patient.riskScore;
-      let generatedMobility = [];
-      
-      if (patient.riskScore < 50) {
-        generatedMobility = [currentMobility + 2, currentMobility - 1, currentMobility + 1, currentMobility];
-      } else if (patient.riskScore < 80) {
-        generatedMobility = [currentMobility + 12, currentMobility + 8, currentMobility + 4, currentMobility];
-      } else {
-        generatedMobility = [currentMobility + 25, currentMobility + 15, currentMobility + 5, currentMobility];
-      }
-
-      generatedMobility = generatedMobility.map(score => Math.min(100, Math.max(0, score)));
-
-      const dynamicHistory = {
-        days: [1, 2, 3, 4],
-        mobility_scores: generatedMobility
-      };
-
       const API_URL = import.meta.env.VITE_API_URL || 'https://auracure-backend.onrender.com/api';
-      const response = await axios.post(`${API_URL}/ai/predict-risk`, dynamicHistory);
-      setAiResult(response.data);
+      const response = await axios.get(`${API_URL}/ai/predict-risk/${patient.id}`);
+      
+      if (response.data.error) {
+        alert(response.data.error);
+      } else {
+        setAiResult(response.data);
+      }
     } catch (err) {
       console.error("AI Analysis failed", err);
     } finally {
@@ -146,8 +134,8 @@ const PatientProfile = () => {
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-slate-400 text-sm">Projected Score</p>
-                        <p className="text-2xl font-bold">{aiResult.predicted_mobility_score}</p>
+                        <p className="text-slate-400 text-sm">Projected Sys BP</p>
+                        <p className="text-2xl font-bold">{aiResult.predicted_value}</p>
                       </div>
                       <div>
                         <p className="text-slate-400 text-sm">Slope (m)</p>

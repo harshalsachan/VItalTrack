@@ -3,8 +3,7 @@ import React, { createContext, useState } from 'react';
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  // THE FIX: Synchronous Lazy Initialization. 
-  // React reads this instantly before the router makes any decisions.
+  
   const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem('AuraCare_user');
     return storedUser ? JSON.parse(storedUser) : null;

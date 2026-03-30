@@ -249,20 +249,47 @@ def complete_front_task(task_id: int):
     cpp_engine.complete_task()
     return {"message": "Task dequeued"}
 
-@app.post("/api/ai/predict-risk")
-def predict_future_risk(history: PatientHistory):
-    x, y, n = history.days, history.mobility_scores, len(history.days)
+@app.get("/api/ai/predict-risk/{patient_id}")
+def predict_future_risk(patient_id: int):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Fetch the REAL historical Systolic BP data for this specific patient
+    cursor.execute("SELECT sys_bp FROM daily_vitals WHERE patient_id = ? ORDER BY id ASC", (patient_id,))
+    records = cursor.fetchall()
+    conn.close()
+
+    # We need at least 3 real data points to draw a trendline
+    if len(records) < 3:
+        return {"error": "Not enough data. Log at least 3 daily vitals to run AI analysis."}
+
+    # Extract the real BP readings
+    y = [row['sys_bp'] for row in records]
+    x = list(range(1, len(y) + 1))
+    n = len(x)
+
+    # Linear Regression Formula (y = mx + b)
     sum_x, sum_y = sum(x), sum(y)
     sum_xy = sum(x[i] * y[i] for i in range(n))
     sum_x_squared = sum(x[i] ** 2 for i in range(n))
+    
     denominator = (n * sum_x_squared) - (sum_x ** 2)
     slope = 0 if denominator == 0 else ((n * sum_xy) - (sum_x * sum_y)) / denominator
     intercept = (sum_y - (slope * sum_x)) / n
+    
+    # Predict tomorrow's BP
     next_day = x[-1] + 1
-    predicted_mobility = (slope * next_day) + intercept
-    predicted_risk = max(0, min(100, 100 - int(predicted_mobility)))
-    warning = "CRITICAL: Rapid Decline" if slope < -5 else "Warning: Slow Decline" if slope < 0 else "Stable"
-    return {"predicted_mobility_score": round(predicted_mobility, 1), "predicted_risk_score": predicted_risk, "trajectory_slope": round(slope, 2), "ai_warning": warning}
+    predicted_bp = (slope * next_day) + intercept
+    
+    # Analyze the slope (A rising BP slope is dangerous)
+    warning = "CRITICAL: Rapid BP Spike Trajectory" if slope > 5 else "Warning: Upward BP Trend" if slope > 0 else "Stable Trajectory"
+    
+    return {
+        "predicted_value": round(predicted_bp, 1), 
+        "trajectory_slope": round(slope, 2), 
+        "ai_warning": warning
+    }
+   
 
 from statistics import mean
 

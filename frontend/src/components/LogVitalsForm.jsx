@@ -27,19 +27,16 @@ const LogVitalsForm = ({ patientId, onNewReading }) => {
         heartRate: parseInt(heartRate)
       });
 
-      // Clear the form
       setSysBp('');
       setDiaBp('');
       setHeartRate('');
       
-      // Handle the AI response
       if (response.data.alert) {
         setAiAlert(response.data.alert);
       } else {
         setSuccess('Vitals logged successfully. Patient is stable.');
       }
 
-      // Trigger any parent component updates (like refreshing the graph)
       if (onNewReading) onNewReading();
 
     } catch (error) {
@@ -103,8 +100,6 @@ const LogVitalsForm = ({ patientId, onNewReading }) => {
           {loading ? 'Analyzing...' : 'Submit & Analyze'}
         </button>
       </form>
-
-      {/* AI Alert Feedback UI */}
       {aiAlert && (
         <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
