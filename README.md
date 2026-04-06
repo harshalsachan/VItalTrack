@@ -1,4 +1,4 @@
-# 🏥 VitalTrack: AI-Powered Patient Monitoring System
+# 🏥 Auracare: AI-Powered Patient Monitoring System
 
 VitalTrack is a full-stack, high-performance patient monitoring application. It bridges a modern React frontend with a Python (FastAPI) backend, which interfaces directly with a custom-built, 64-bit C++ Data Structures engine via memory pointers (`ctypes`). 
 
